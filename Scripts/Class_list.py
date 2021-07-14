@@ -10,12 +10,12 @@ class TES_algorithm:
     #### inputs
 
     + parameters -> diccionario que contiene las siguientes propiedades:
-        + ``hour initial`` -> Hora inicial en la cual se calcularan los TES
-        + ``hour final`` -> Hora final en   la cual se calcularan los TES
-        + ``hour limit`` -> Hora limite para que los calculos no tiendan a infinito
-        + ``path data`` -> Direccion donse se encuentran los datos
-        + ``Data folders`` -> Carpetas donde se encuetran los datos (division de años)
-        + ``path results`` -> Direccion donde se guardaran los archivos de resultados
+        + `hour initial` -> Hora inicial en la cual se calcularan los TES
+        + `hour final` -> Hora final en   la cual se calcularan los TES
+        + `hour limit` -> Hora limite para que los calculos no tiendan a infinito
+        + `path data` -> Direccion donse se encuentran los datos
+        + `Data folders` -> Carpetas donde se encuetran los datos (division de años)
+        + `path results` -> Direccion donde se guardaran los archivos de resultados
     """
 
     def __init__(self, parameters={}):
