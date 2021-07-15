@@ -91,7 +91,7 @@ class TES_algorithm:
             data_set = self.data_sets[terapy_type]
             # Ciclo para variar en las condiciones de cielo
             for cloud_i, cloud in enumerate(self.parameters["Cloud factor"]):
-                print("\t\tCondicion de cielo {}".format(cloud))
+                print("\tCondicion de cielo {}".format(cloud))
                 cloud_value = self.parameters["Cloud factor"][cloud]
                 # Ciclo para varias en las dosis de cada tipo de terapia
                 for doses_i, doses_value in enumerate(data_set["Doses"]):
@@ -128,7 +128,7 @@ class TES_algorithm:
                                        cloud_i,
                                        self.time)
 
-    def obtain_stations(self, folder):
+    def obtain_stations(self, folder=""):
         """
         Obtiene la dirección y una lista con las estaciones de los datos por año
         """
@@ -141,7 +141,7 @@ class TES_algorithm:
                                                          folder)
             self.stations = os.listdir(self.path_stations)
 
-    def obtain_path_measurements(self, station):
+    def obtain_path_measurements(self, station=""):
         """
         Obtiene la direccion de los parametros y las mediciones de cada estacion
         #### inputs
@@ -180,7 +180,7 @@ class TES_algorithm:
         self.month = int(name[2:4])
         self.year = int(name[0:2])
 
-    def calculate_TES(self, doses_value=250,  cloud_value=0.5, data=[], time=[[]]):
+    def calculate_TES(self, doses_value=250,  cloud_value=0.5, data=[], time=[]):
         """
         Calcula los TES para un dia completo dependiendo la dosis, la condicion de cielo y los datos
         """
@@ -191,7 +191,7 @@ class TES_algorithm:
                                     data,
                                     time)
 
-    def calculate_integral(self, doses_value, cloud_value, hour, data, time):
+    def calculate_integral(self, doses_value=250, cloud_value=0.5, hour=10, data=[], time=[]):
         """
         Calcula los TES para una hora dependiendo la dosis, la condicion de cielo y los datos
         """
@@ -209,7 +209,7 @@ class TES_algorithm:
             time[hour, self.conse_day,  0] += min
             time[hour, self.conse_day, 1] += 1
 
-    def obtain_mean_per_minute(self, time):
+    def obtain_mean_per_minute(self, time=[]):
         """
         Obtiene el promedio de los TES para cada minuto y dia
         """
@@ -220,7 +220,7 @@ class TES_algorithm:
                     data_sum = time[hour, day, 0]
                     time[hour, day, 0] = data_sum // data_count + 1
 
-    def obtain_monthly_mean(self, time, month_mean):
+    def obtain_monthly_mean(self, time=[], month_mean=[]):
         """
         Obtiene el promedio mensual de los TES para cada minuto
         """
@@ -237,7 +237,7 @@ class TES_algorithm:
                 if data_count != 0:
                     month_mean[hour, month, 0] = data_sum//data_count+1
 
-    def obtain_hourly_mean(self, time, hourly_time):
+    def obtain_hourly_mean(self, time=[], hourly_time=[]):
         """
         obtiene el promedio por hora de los TES
         """
@@ -251,7 +251,7 @@ class TES_algorithm:
             data_sum = hourly_time[hour,  0]
             hourly_time[hour,  0] = data_sum//data_count+1
 
-    def fill_data_from_lost_days(self,  time, month_mean, hourly_time):
+    def fill_data_from_lost_days(self,  time=[], month_mean=[], hourly_time=[]):
         """
         Asigna valores a los dias que no se calcularon los TES con el promedio mensual o horario
         """
@@ -264,7 +264,7 @@ class TES_algorithm:
                     else:
                         time[hour, day, 0] = hourly_time[hour,  0]
 
-    def write_results(self, data_set, doses_i, cloud_i, time):
+    def write_results(self, data_set={}, doses_i=1, cloud_i=0, time=[]):
         """
         Escritura de los archivos de resultados
         """
@@ -291,7 +291,7 @@ class TES_algorithm:
             file.write("\n")
         file.close()
 
-    def hh_mm_format(self, minute):
+    def hh_mm_format(self, minute=59):
         """
         Formateo de la hora con los minutos: hh:mm
         """
@@ -303,7 +303,7 @@ class TES_algorithm:
                               minute)
         return time
 
-    def mm_dd_format(self, date):
+    def mm_dd_format(self, date=datetime.date(2000, 12, 31)):
         """
         Formateo del dia y mes: mm:dd
         """
@@ -313,7 +313,7 @@ class TES_algorithm:
                               day)
         return date
 
-    def header_file_format(self, number):
+    def header_file_format(self, number=5):
         """
         Formateo del caracter a dos strings
         """
@@ -321,7 +321,7 @@ class TES_algorithm:
         return number
 
 
-def date2consecutive_day(year, month, day):
+def date2consecutive_day(year=2000, month=12, day=31):
     """
     Funcion para obtener el dia consecutivo a partir de una fecha
     """
@@ -331,7 +331,7 @@ def date2consecutive_day(year, month, day):
     return num
 
 
-def obtain_month_from_consecutive_day(day):
+def obtain_month_from_consecutive_day(day=100):
     """
     Funcion para obtener el numero de mes de una fecha en dias consecutivos
     """
@@ -340,7 +340,7 @@ def obtain_month_from_consecutive_day(day):
     return month
 
 
-def consecutive_day2date(day):
+def consecutive_day2date(day=100):
     """
     Funcion para obtener la fecha a partir del dia consecutivo
     """
