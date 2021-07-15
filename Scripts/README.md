@@ -6,9 +6,9 @@
 
   ```python
   nombre: {"Dataset": tipo de datos que se usaran UVA o Ery,
-                  "Doses": lista con las dosis,
-                  "Filename init": nombre inicial del archivo de resultados,
-                  "Filenames": lista de nombres para cada dosis,}
+           "Doses": lista con las dosis,
+           "Filename init": nombre inicial del archivo de resultados,
+           "Filenames": lista de nombres para cada dosis,}
   ```
 
 - `Tes.py`:
