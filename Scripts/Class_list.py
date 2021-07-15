@@ -23,6 +23,7 @@ class TES_algorithm:
         self.define_datasets_for_terapy_types()
         self.define_total_time_in_minutes()
         self.define_cloud_factor_list()
+        self.define_transmittance_per_each_cabin()
         self.create_folder_results()
 
     def define_total_time_in_minutes(self):
@@ -37,12 +38,18 @@ class TES_algorithm:
         """
         Definicion de los tipos de cielo despejado, para cada valor debera añadirse su nombre en el diccionacio self.cloud_conditions
         """
-        cloud_factor = {"Cloud factor": [1, 0.9, 0.6], }
-        self.cloud_conditions = {1: "Despejado",
-                                 0.9: "Medio nublado",
-                                 0.6: "Nublado"
-                                 }
+        cloud_factor = {"Cloud factor": {"Despejado": 1,
+                                         "Medio nublado": 0.9,
+                                         "Nublado": 0.6, }
+                        }
         self.parameters.update(cloud_factor)
+
+    def define_transmittance_per_each_cabin(self):
+        transmittance_cabins = {"Transmittance": {"A": 0.521,
+                                                  "B": 0.355,
+                                                  "C": 0.512,
+                                                  "D": 0.286}}
+        self.parameters.update(transmittance_cabins)
 
     def define_datasets_for_terapy_types(self):
         """
@@ -63,43 +70,23 @@ class TES_algorithm:
                                   "Filenames": ["I", "II", "III", "IV", "V", "VI"], }
                           }
 
-    def count_type_for_each_dataset(self, data_set):
-        """
-        Contador de la cantidad de dosis y condiciones de cielo.
-        ### inputs
-        + data_set -> diccionario definido en  ``self.define_datasets_for_terapy_types``
-        """
-        count_type = {"Doses count": np.size(data_set["Doses"]),
-                      "Cloud count": np.size(self.parameters["Cloud factor"]),
-                      }
-        return count_type
-
     def create_folder_results(self):
         """
         Creacion de la carpeta de resultados
         """
         mkdir(path=self.parameters["path results"])
 
-    def init_system(self, data_set):
+    def init_system(self):
         """
         Inicializacion de las matrices de resultados
-        #### inputs
-        + data_set -> diccionario definido en  ``self.define_datasets_for_terapy_types``
         """
-        count_type = self.count_type_for_each_dataset(data_set)
         self.time = np.zeros([self.parameters["Total minutes"],
                               365,
-                              count_type["Doses count"],
-                              count_type["Cloud count"],
                               2])
         self.hourly_mean = np.zeros([self.parameters["Total minutes"],
-                                     count_type["Doses count"],
-                                     count_type["Cloud count"],
                                      2])
         self.monthly_mean = np.zeros([self.parameters["Total minutes"],
                                       12,
-                                      count_type["Doses count"],
-                                      count_type["Cloud count"],
                                       2])
 
     def run(self):
@@ -111,54 +98,49 @@ class TES_algorithm:
             print("Calculando TES para {}".format(terapy_type))
             data_set = self.data_sets[terapy_type]
             # Inicializacion del sistema
-            self.init_system(data_set)
-            # Ciclo para variar en las condiciones de cielo
-            for cloud_i, cloud in enumerate(self.parameters["Cloud factor"]):
-                print("\tCondicion de cielo {}".format(
-                    self.cloud_conditions[cloud]))
-                # Ciclo para varias en las dosis de cada tipo de terapia
-                for doses_i, doses_value in enumerate(data_set["Doses"]):
-                    # Ciclo para varias en las carpetas de datos
-                    for path_folder in self.parameters["Data folders"]:
-                        self.obtain_stations(path_folder)
-                        # Ciclo para variar en las estaciones de monitoreo
-                        for station in self.stations:
-                            self.obtain_path_measurements(station)
-                            self.obtain_dates_from_data()
-                            for date in self.dates:
-                                self.obtain_measurements_from_date(date,
-                                                                   data_set)
-                                self.obtain_date_from_name(date)
-                                self.conse_day = date2consecutive_day(self.year,
-                                                                      self.month,
-                                                                      self.day)
-                                self.calculate_TES(doses_i,
-                                                   doses_value,
-                                                   cloud_i,
-                                                   cloud,
-                                                   self.data,
-                                                   self.time)
+            for cabin_i, cabin in enumerate(self.parameters["Transmittance"]):
+                print("\tEn la cabina {}".format(cabin))
+                transmittance_value = self.parameters["Transmittance"][cabin]
+                # Ciclo para variar en las condiciones de cielo
+                for cloud_i, cloud in enumerate(self.parameters["Cloud factor"]):
+                    print("\t\tCondicion de cielo {}".format(cloud))
+                    cloud_value = self.parameters["Cloud factor"][cloud]
+                    # Ciclo para varias en las dosis de cada tipo de terapia
+                    for doses_i, doses_value in enumerate(data_set["Doses"]):
+                        self.init_system()
+                        # Ciclo para varias en las carpetas de datos
+                        for path_folder in self.parameters["Data folders"]:
+                            self.obtain_stations(path_folder)
+                            # Ciclo para variar en las estaciones de monitoreo
+                            for station in self.stations:
+                                self.obtain_path_measurements(station)
+                                self.obtain_dates_from_data()
+                                for date in self.dates:
+                                    self.obtain_measurements_from_date(date,
+                                                                       data_set)
+                                    self.obtain_date_from_name(date)
+                                    self.conse_day = date2consecutive_day(self.year,
+                                                                          self.month,
+                                                                          self.day)
+                                    self.calculate_TES(doses_value,
+                                                       cloud_value,
+                                                       transmittance_value,
+                                                       self.data,
+                                                       self.time)
 
-                    self.obtain_mean_per_minute(doses_i,
-                                                cloud_i,
-                                                self.time)
-                    self.obtain_monthly_mean(doses_i,
-                                             cloud_i,
-                                             self.time,
-                                             self.monthly_mean)
-                    self.obtain_hourly_mean(doses_i,
-                                            cloud_i,
-                                            self.time,
-                                            self.hourly_mean)
-                    self.fill_data_from_lost_days(doses_i,
-                                                  cloud_i,
-                                                  self.time,
-                                                  self.monthly_mean,
-                                                  self.hourly_mean)
-                    self.write_results(data_set,
-                                       doses_i,
-                                       cloud_i,
-                                       self.time)
+                        self.obtain_mean_per_minute(self.time)
+                        self.obtain_monthly_mean(self.time,
+                                                 self.monthly_mean)
+                        self.obtain_hourly_mean(self.time,
+                                                self.hourly_mean)
+                        self.fill_data_from_lost_days(self.time,
+                                                      self.monthly_mean,
+                                                      self.hourly_mean)
+                        self.write_results(data_set,
+                                           doses_i,
+                                           cloud_i,
+                                           cabin,
+                                           self.time)
 
     def obtain_stations(self, folder):
         """
@@ -212,20 +194,19 @@ class TES_algorithm:
         self.month = int(name[2:4])
         self.year = int(name[0:2])
 
-    def calculate_TES(self, doses_i=0, doses_value=250, cloud_i=1, cloud_value=0.5, data=[], time=[[]]):
+    def calculate_TES(self, doses_value=250,  cloud_value=0.5, transmittance_value=0.5, data=[], time=[[]]):
         """
         Calcula los TES para un dia completo dependiendo la dosis, la condicion de cielo y los datos
         """
         for hour in range(self.parameters["Total minutes"]):
-            self.calculate_integral(doses_i,
-                                    doses_value,
-                                    hour,
-                                    cloud_i,
+            self.calculate_integral(doses_value,
                                     cloud_value,
+                                    transmittance_value,
+                                    hour,
                                     data,
                                     time)
 
-    def calculate_integral(self, doses_i, doses_value, hour, cloud_i, cloud_value, data, time):
+    def calculate_integral(self, doses_value, cloud_value, transmittance_value, hour, data, time):
         """
         Calcula los TES para una hora dependiendo la dosis, la condicion de cielo y los datos
         """
@@ -233,88 +214,82 @@ class TES_algorithm:
         i = hour
         while doses < doses_value and i < self.parameters["Total hours"]-1:
             if data[i] != 0:
-                doses += data[i]*60*cloud_value
+                doses += data[i]*60*cloud_value*transmittance_value
             i += +1
         if doses != 0:
             if i < self.parameters["Total hours"]-1:
                 min = i+1-hour
             else:
                 min = self.parameters["Total hours"]-hour
-            time[hour, self.conse_day, doses_i, cloud_i, 0] += min
-            time[hour, self.conse_day, doses_i, cloud_i, 1] += 1
+            time[hour, self.conse_day,  0] += min
+            time[hour, self.conse_day, 1] += 1
 
-    def obtain_mean_per_minute(self, doses_i, cloud_i, time):
+    def obtain_mean_per_minute(self, time):
         """
         Obtiene el promedio de los TES para cada minuto y dia
         """
         for hour in range(self.parameters["Total minutes"]):
             for day in range(365):
-                data_count = time[hour, day, doses_i, cloud_i, 1]
+                data_count = time[hour, day, 1]
                 if data_count != 0:
-                    data_sum = time[hour, day, doses_i, cloud_i, 0]
-                    time[hour,
-                         day,
-                         doses_i,
-                         cloud_i,
-                         0] = data_sum // data_count + 1
+                    data_sum = time[hour, day, 0]
+                    time[hour, day, 0] = data_sum // data_count + 1
 
-    def obtain_monthly_mean(self, doses_i, cloud_i, time, month_mean):
+    def obtain_monthly_mean(self, time, month_mean):
         """
         Obtiene el promedio mensual de los TES para cada minuto
         """
         for hour in range(self.parameters["Total minutes"]):
             for day in range(365):
                 month = obtain_month_from_consecutive_day(day)
-                time_day = time[hour, day, doses_i, cloud_i, 0]
+                time_day = time[hour, day,  0]
                 if time_day != 0:
-                    month_mean[hour, month, doses_i, cloud_i, 0] += time_day
-                    month_mean[hour, month, doses_i, cloud_i, 1] += 1
+                    month_mean[hour, month,  0] += time_day
+                    month_mean[hour, month,  1] += 1
             for month in range(12):
-                data_sum = month_mean[hour, month, doses_i, cloud_i, 0]
-                data_count = month_mean[hour, month, doses_i, cloud_i, 1]
+                data_sum = month_mean[hour, month, 0]
+                data_count = month_mean[hour, month, 1]
                 if data_count != 0:
-                    month_mean[hour, month, doses_i, cloud_i,
-                               0] = data_sum//data_count+1
+                    month_mean[hour, month, 0] = data_sum//data_count+1
 
-    def obtain_hourly_mean(self, doses_i, cloud_i, time, hourly_time):
+    def obtain_hourly_mean(self, time, hourly_time):
         """
         obtiene el promedio por hora de los TES
         """
         for hour in range(self.parameters["Total minutes"]):
             for day in range(365):
-                time_day = time[hour, day, doses_i, cloud_i, 0]
+                time_day = time[hour, day,  0]
                 if time_day != 0:
-                    hourly_time[hour, doses_i, cloud_i, 0] += time_day
-                    hourly_time[hour, doses_i, cloud_i, 1] += 1
-            data_count = hourly_time[hour, doses_i, cloud_i, 1]
-            data_sum = hourly_time[hour, doses_i, cloud_i, 0]
-            hourly_time[hour, doses_i, cloud_i, 0] = data_sum//data_count+1
+                    hourly_time[hour,  0] += time_day
+                    hourly_time[hour,  1] += 1
+            data_count = hourly_time[hour,  1]
+            data_sum = hourly_time[hour,  0]
+            hourly_time[hour,  0] = data_sum//data_count+1
 
-    def fill_data_from_lost_days(self, doses_i, cloud_i, time, month_mean, hourly_time):
+    def fill_data_from_lost_days(self,  time, month_mean, hourly_time):
         """
         Asigna valores a los dias que no se calcularon los TES con el promedio mensual o horario
         """
         for hour in range(self.parameters["Total minutes"]):
             for day in range(365):
-                if time[hour, day, doses_i, cloud_i, 0] == 0:
+                if time[hour, day,  0] == 0:
                     month = obtain_month_from_consecutive_day(day)
-                    if month_mean[hour, month, doses_i, cloud_i, 0] != 0:
-                        time[hour, day, doses_i, cloud_i,
-                             0] = month_mean[hour, month, doses_i, cloud_i, 0]
+                    if month_mean[hour, month,  0] != 0:
+                        time[hour, day, 0] = month_mean[hour, month,  0]
                     else:
-                        time[hour, day, doses_i, cloud_i,
-                             0] = hourly_time[hour, doses_i, cloud_i, 0]
+                        time[hour, day, 0] = hourly_time[hour,  0]
 
-    def write_results(self, data_set, doses_i, cloud_i, time):
+    def write_results(self, data_set, doses_i, cloud_i, transmittance_name, time):
         """
         Escritura de los archivos de resultados
         """
         init_name = data_set["Filename init"]
         terapy_name = data_set["Filenames"][doses_i]
-        filename = "{}{}_{}_{}.csv".format(self.parameters["path results"],
-                                           init_name,
-                                           terapy_name,
-                                           cloud_i)
+        filename = "{}{}_{}_{}_{}.csv".format(self.parameters["path results"],
+                                              init_name,
+                                              transmittance_name,
+                                              terapy_name,
+                                              cloud_i)
         file = open(filename,
                     "w")
         file.write("Hour")
@@ -327,7 +302,7 @@ class TES_algorithm:
             hour_index = self.hh_mm_format(hour)
             file.write(hour_index)
             for day in range(365):
-                time_day_hour = time[hour, day, doses_i, cloud_i, 0]
+                time_day_hour = time[hour, day, 0]
                 file.write(",{:.2f}".format(time_day_hour))
             file.write("\n")
         file.close()
